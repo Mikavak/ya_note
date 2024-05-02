@@ -1,10 +1,13 @@
 # на страницы создания и редактирования заметки передаются формы.
-from django.test import TestCase
-from ..models import Note
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.urls import reverse
 
+from ..forms import NoteForm
+from ..models import Note
+
 User = get_user_model()
+
 
 class TestContent(TestCase):
 
@@ -17,11 +20,11 @@ class TestContent(TestCase):
             text='Текст',
             author=cls.author,
         )
-        cls.note_2 = Note.objects.create(
-            title='Новая заметка автора № 2',
-            text='Текст',
-            author=cls.author_2,
-        )
+        # cls.note_2 = Note.objects.create(
+        #     title='Новая заметка автора № 2',
+        #     text='Текст',
+        #     author=cls.author_2,
+        # )
 
     def test_note(self):
         self.client.force_login(self.author)
@@ -29,7 +32,20 @@ class TestContent(TestCase):
         object_list = response.context['object_list']
         self.assertIn(self.note, object_list)
 
-# в список заметок одного пользователя не попадают
-# заметки другого пользователя;    
     def test_author(self):
-        
+        self.client.force_login(self.author_2)
+        response = self.client.get(reverse('notes:list'))
+        object_list = response.context['object_list']
+        self.assertNotIn(self.note, object_list)
+
+    def test_authorized_client_has_form(self):
+        urls = (
+            ('notes:edit', (self.note.slug,)),
+            ('notes:add', None)
+        )
+        for name, args in urls:
+            self.client.force_login(self.author)
+            with self.subTest(name=name):
+                url = reverse(name, args=args)
+                response = self.client.get(url)
+                self.assertIn('form', response.context)
