@@ -24,17 +24,19 @@ class TestCommentCreation(TestCase):
                          'text': 'Новая заметка'}
 
     def test_anonymous_user_cant_create_note(self):
+        """Аноним не может создать заметку"""
         self.client.post(self.url, data=self.form_data)
         note_count = Note.objects.count()
         self.assertEqual(note_count, 0)
 
     def test_user_can_create_comment(self):
+        """Залогиненый пользователь может создать заметку"""
         self.auth_client.post(self.url, data=self.form_data)
-
         note_count = Note.objects.count()
         self.assertEqual(note_count, 1)
 
     def test_slug(self):
+        """Невозможно создать две заметки с одинаковым slug."""
         note = Note.objects.create(
             title='F', text='f', author=self.author, slug='1')
         self.form_data['slug'] = '1'
@@ -43,13 +45,19 @@ class TestCommentCreation(TestCase):
                              errors=(note.slug + WARNING))
 
     def test_empty_slug(self):
+        """
+        Если при создании заметки не заполнен slug,
+        то он формируется автоматически, с помощью 
+        функции pytils.translit.slugify.
+        """
         response = self.auth_client.post(self.url, data=self.form_data)
         self.assertRedirects(response, reverse('notes:success'))
         new_note = Note.objects.get()
         expected_slug = slugify(self.form_data['title'])
         self.assertEqual(new_note.slug, expected_slug)
 
-    def test_other_user_cant_edit_note(self):
+    def test_other_user_cant_edit_and_delete_note(self):
+        """Пользователь не может удалять и редактировать чужие заметки"""
         urls = (
             ('notes:edit'),
             ('notes:detail'),
@@ -59,6 +67,7 @@ class TestCommentCreation(TestCase):
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_author_can_edit_note(self):
+        """Автор заметки может её комментировать"""
         note = Note.objects.create(
             title='F', text='f', author=self.author, slug='1')
         url = reverse(('notes:edit'), args=(note.slug))
@@ -66,6 +75,7 @@ class TestCommentCreation(TestCase):
         self.assertRedirects(response, reverse('notes:success'))
 
     def test_author_can_delete_note(self):
+        """Автор заметки может её удалить"""
         note = Note.objects.create(
             title='F', text='f', author=self.author, slug='1')
         url = reverse(('notes:delete'), args=(note.slug))
