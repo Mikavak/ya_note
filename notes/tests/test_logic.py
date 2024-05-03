@@ -1,15 +1,11 @@
-# news/tests/test_logic.py
-# from http import HTTPStatus
+from http import HTTPStatus
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 from pytils.translit import slugify
-from http import HTTPStatus
 
 from ..forms import WARNING
-# Импортируем из файла с формами список стоп-слов и предупреждение формы.
-# Загляните в news/forms.py, разберитесь с их назначением.
-# from news.forms import BAD_WORDS, WARNING
 from ..models import Note
 
 User = get_user_model()
@@ -25,11 +21,7 @@ class TestCommentCreation(TestCase):
         cls.auth_client = Client()
         cls.auth_client.force_login(cls.author)
         cls.form_data = {'title': 'New',
-                         'text': 'Новая заметка', 'author': cls.author}
-        cls.note = Note.objects.create(
-            title='Заметка',
-            text='текст заметки',
-            author=cls.author)
+                         'text': 'Новая заметка'}
 
     def test_anonymous_user_cant_create_note(self):
         self.client.post(self.url, data=self.form_data)
@@ -44,7 +36,7 @@ class TestCommentCreation(TestCase):
 
     def test_slug(self):
         note = Note.objects.create(
-            title='F', text='f', author=self.user, slug='1')
+            title='F', text='f', author=self.author, slug='1')
         self.form_data['slug'] = '1'
         response = self.auth_client.post(self.url, data=self.form_data)
         self.assertFormError(response, 'form', 'slug',
@@ -66,12 +58,17 @@ class TestCommentCreation(TestCase):
             response = self.client.post(name, data=self.form_data)
             self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
+    def test_author_can_edit_note(self):
+        note = Note.objects.create(
+            title='F', text='f', author=self.author, slug='1')
+        url = reverse(('notes:edit'), args=(note.slug))
+        response = self.auth_client.post(url, data=self.form_data)
+        self.assertRedirects(response, reverse('notes:success'))
+
     def test_author_can_delete_note(self):
-        urls = (
-            ('notes:edit'),
-            ('notes:delete'),
-        )
-        for name in urls:
-            url = reverse(name, args=(note.slug))
-            response = self.auth_client.post(url, data=self.form_data)
-            self.assertRedirects(response, reverse('notes:success'))
+        note = Note.objects.create(
+            title='F', text='f', author=self.author, slug='1')
+        url = reverse(('notes:delete'), args=(note.slug))
+        response = self.auth_client.post(url, data=self.form_data)
+        self.assertRedirects(response, reverse('notes:success'))
+        self.assertEqual(Note.objects.count(), 0)

@@ -1,9 +1,7 @@
-# на страницы создания и редактирования заметки передаются формы.
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from ..forms import NoteForm
 from ..models import Note
 
 User = get_user_model()
@@ -20,11 +18,6 @@ class TestContent(TestCase):
             text='Текст',
             author=cls.author,
         )
-        # cls.note_2 = Note.objects.create(
-        #     title='Новая заметка автора № 2',
-        #     text='Текст',
-        #     author=cls.author_2,
-        # )
 
     def test_note(self):
         self.client.force_login(self.author)
